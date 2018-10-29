@@ -1,2 +1,6 @@
 # Ignore images
 **.png
+
+temp.py
+
+**.pyc

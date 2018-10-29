@@ -10,9 +10,8 @@ def acosd(x): return np.degrees(np.arccos(x))
 class TwoLegRobot():
     def __init__(
         self, L=0.1, M=0.1, dt=1e-3,
-        t_lift=0.2, t_step=1.6,
-        y_lift=0.01, x_step=-0.08,
-        mean_speed=None,
+        # t_lift=0.2, t_step=1.6,
+        y_lift=0.01, x_step=-0.08, speed=0.05,
         x0_init=0, y0_init=0,
         theta0_init=30, theta1_init=120,
         # foot1_clamped=True, 
@@ -23,10 +22,11 @@ class TwoLegRobot():
         self.L = L
         self.M = M
         self.dt = dt
-        self.t_lift = t_lift
-        self.t_step = t_step
+        # self.t_lift = t_lift
+        # self.t_step = t_step
         self.y_lift = y_lift
         self.x_step = x_step
+        self.speed = speed
         self.motion_counter = 0
 
         # Initialise traces:
@@ -90,8 +90,7 @@ class TwoLegRobot():
         return x, y
 
     def move_affector(
-        self, joint0x=None, joint0y=None, joint4x=None, joint4y=None, T=0,
-        plot=True
+        self, joint0x=None, joint0y=None, joint4x=None, joint4y=None, T=0
     ):
         """Move each affector by the specified distance in time T. Positive
         distances correspond to positive directions in the x and y axes (IE a
@@ -140,49 +139,44 @@ class TwoLegRobot():
         self.y = np.append(self.y, y, axis=1)
         self.theta = np.append(self.theta, theta, axis=1)
         self.motion_counter += 1
-
-        if plot:
-            filename = "screenshots/motion {}".format(self.motion_counter)
-            self.plot_frame(filename)
-            
     
-    def lift_left(self, y_lift=None, t_lift=None):
-        """Lift joints 0 and 1 vertically upwards by a distance y_lift in time
-        t_lift using a cubic motion trajectory
+    def lift_left(self, y_lift):
+        """Lift joints 0 and 1 vertically upwards by a distance y_lift using a
+        cubic motion trajectory
         """
-        # If height and time are not specified, use attributes as defaults:
-        if y_lift is None: y_lift = self.y_lift
-        if t_lift is None: t_lift = self.t_lift
+        t_lift = abs(y_lift / self.speed)
         self.move_affector(joint0y=y_lift, T=t_lift)
 
-    def step_left(self, x_step=None, t_step=None):
-        """Step joints 0 and 1 horizontally across by a distance x_step in time
-        t_step using a cubic motion trajectory
+    def step_left(self, x_step):
+        """Step joints 0 and 1 horizontally across by a distance x_step using a
+        cubic motion trajectory
         """
-        # If distance and time are not specified, use attributes as defaults:
-        if x_step is None: x_step = self.x_step
-        if t_step is None: t_step = self.t_step
+        t_step = abs(x_step / self.speed)
         self.move_affector(joint0x=x_step, T=t_step)
     
-    def lift_right(self, y_lift=None, t_lift=None):
-        """Lift joints 3 and 4 vertically upwards by a distance y_lift in time
-        t_lift using a cubic motion trajectory
+    def lift_right(self, y_lift):
+        """Lift joints 3 and 4 vertically upwards by a distance y_lift using a
+        cubic motion trajectory
         """
-        # If height and time are not specified, use attributes as defaults:
-        if y_lift is None: y_lift = self.y_lift
-        if t_lift is None: t_lift = self.t_lift
+        t_lift = abs(y_lift / self.speed)
         self.move_affector(joint4y=y_lift, T=t_lift)
 
-    def step_right(self, x_step=None, t_step=None):
-        """Step joints 3 and 4 horizontally across by a distance x_step in time
-        t_step using a cubic motion trajectory
+    def step_right(self, x_step):
+        """Step joints 3 and 4 horizontally across by a distance x_step using a
+        cubic motion trajectory
         """
-        # If distance and time are not specified, use attributes as defaults:
-        if x_step is None: x_step = self.x_step
-        if t_step is None: t_step = self.t_step
+        t_step = abs(x_step / self.speed)
         self.move_affector(joint4x=x_step, T=t_step)
+    
+    def take_horizontal_step(self, y_lift, x_step):
+        self.lift_left(y_lift)
+        self.step_left(x_step)
+        self.lift_left(-y_lift)
+        self.lift_right(y_lift)
+        self.step_right(x_step)
+        self.lift_right(-y_lift)
 
-    def walk_distance(self, distance=-0.49):
+    def walk_distance(self, distance):
         """NB this method currently only supports negative distances (IE
         towards the left in the xy-plane); to support positive distances, need
         to test for the sign of `distance`
@@ -190,72 +184,28 @@ class TwoLegRobot():
         x_init = self.x[0, -1]
         # Keep taking full steps until a full step would be too much:
         while self.x[0, -1] + self.x_step - x_init > distance:
-            self.lift_left()
-            self.step_left()
-            self.lift_left(-self.y_lift)
-            self.lift_right()
-            self.step_right()
-            self.lift_right(-self.y_lift)
-        # Take a final step of the right distance:
-        final_step_length = distance - self.x[0, -1]
-        self.lift_left()
-        self.step_left(final_step_length)
+            self.take_horizontal_step(self.y_lift, self.x_step)
+        # Take a final step of the right length:
+        final_step_length = distance + x_init - self.x[0, -1]
+        self.take_horizontal_step(self.y_lift, final_step_length)
+    
+    def navigate_step(self, step_height):
+        self.lift_left(step_height + self.y_lift)
+        self.step_left(self.x_step)
         self.lift_left(-self.y_lift)
-        self.lift_right()
-        self.step_right(final_step_length)
+        self.lift_right(step_height + self.y_lift)
+        self.step_right(self.x_step)
         self.lift_right(-self.y_lift)
-    
-    def navigate_step(self, step_height=0.05):
-        pass
-    
-    def add_frame_to_plot(self, frame=-1):
-        # Plot links:
-        plt.plot(self.x[:, frame], self.y[:, frame], 'k-')
-        # Plot motors:
-        plt.plot(self.x[[1,2,3], frame], self.y[[1,2,3], frame], 'ro')
 
-    def plot_frame(self, filename="robot pos", frame=-1):
-        plt.figure()
-        self.add_frame_to_plot(frame)
-        plt.grid(True)
-        # plt.axis('equal')
-        plt.xlim(-0.5, 0.15)
-        plt.ylim(-0.1, 0.3)
-        plt.savefig(filename)
-        plt.close()
 
-def plot_trace(x, filename="trace", t=None):
-    """NB t currently does nothing"""
-    plt.figure()
-    plt.plot(x)
-    plt.grid(True)
-    plt.savefig(filename)
-    plt.close()
-    
 
 if __name__ == "__main__":
-    # a = np.array([0])
-    # print(a)
-    # np.append(a, [1])
-    # print(a)
-    # a = [0]
-    # a.append(1)
-    # print(a)
-    r = TwoLegRobot()
-    # r = Robot(dt=0.05)
-    # print(r.x1, r.x2, r.x3, r.x4, r.x5)
-    # print(r.y1, r.y2, r.y3, r.y4, r.y5)
-    # print(r.x)
-    # print(r.y)
-    # r.plot_frame()
-    # r.lift_left()
-    # r.plot_frame(filename="robot_pos2")
-    # r.step_left()
-    # r.plot_frame(filename="robot_pos3")
-    # print(r.x)
-    # print(r.y)
 
-    r.walk_distance()
-    plot_trace(r.y[1], "y1")
-    plot_trace(r.x[2], "x2")
-    plot_trace(r.y[2], "y2")
+    r = TwoLegRobot()
+    
+    r.walk_distance(-0.49)
+    r.navigate_step(0.05)
+    remaining_distance = -1.0 - r.x[0, -1]
+    r.walk_distance(remaining_distance)
+
+    print(r.x.shape)
