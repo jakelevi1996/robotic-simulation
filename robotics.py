@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import logging
 
 def sind(x): return np.sin(np.radians(x))
 def cosd(x): return np.cos(np.radians(x))
@@ -73,8 +74,7 @@ class TwoLegRobot():
     
     def linear_acceleration_trajectory(self, ):
         pass
-        
-    
+
     def affectors_to_angles(self, x, y, theta):
         # Calculate distance between end affectors:
         alpha = np.sqrt((x[4] - x[0])**2 + (y[4] - y[0])**2)
@@ -90,8 +90,8 @@ class TwoLegRobot():
         return x, y
 
     def move_affector(
-        self, joint0x=None, joint0y=None, joint4x=None, joint4y=None,
-        T=0, plot=True
+        self, joint0x=None, joint0y=None, joint4x=None, joint4y=None, T=0,
+        plot=True
     ):
         """Move each affector by the specified distance in time T. Positive
         distances correspond to positive directions in the x and y axes (IE a
@@ -140,11 +140,11 @@ class TwoLegRobot():
         self.y = np.append(self.y, y, axis=1)
         self.theta = np.append(self.theta, theta, axis=1)
         self.motion_counter += 1
-        # Plot results, if specified:
+
         if plot:
-            self.plot_frame(
-                filename="screenshots/motion {}".format(self.motion_counter)
-            )
+            filename = "screenshots/motion {}".format(self.motion_counter)
+            self.plot_frame(filename)
+            
     
     def lift_left(self, y_lift=None, t_lift=None):
         """Lift joints 0 and 1 vertically upwards by a distance y_lift in time
@@ -182,24 +182,47 @@ class TwoLegRobot():
         if t_step is None: t_step = self.t_step
         self.move_affector(joint4x=x_step, T=t_step)
 
-    def walk_distance(self, distance=0):
+    def walk_distance(self, distance=-0.49):
+        """NB this method currently only supports negative distances (IE
+        towards the left in the xy-plane); to support positive distances, need
+        to test for the sign of `distance`
+        """
+        x_init = self.x[0, -1]
+        # Keep taking full steps until a full step would be too much:
+        while self.x[0, -1] + self.x_step - x_init > distance:
+            self.lift_left()
+            self.step_left()
+            self.lift_left(-self.y_lift)
+            self.lift_right()
+            self.step_right()
+            self.lift_right(-self.y_lift)
+        # Take a final step of the right distance:
+        final_step_length = distance - self.x[0, -1]
         self.lift_left()
-        self.step_left()
+        self.step_left(final_step_length)
         self.lift_left(-self.y_lift)
         self.lift_right()
-        self.step_right()
+        self.step_right(final_step_length)
         self.lift_right(-self.y_lift)
+    
+    def navigate_step(self, step_height=0.05):
+        pass
+    
+    def add_frame_to_plot(self, frame=-1):
+        # Plot links:
+        plt.plot(self.x[:, frame], self.y[:, frame], 'k-')
+        # Plot motors:
+        plt.plot(self.x[[1,2,3], frame], self.y[[1,2,3], frame], 'ro')
 
-    def plot_frame(self, frame=-1, filename="robot_pos"):
+    def plot_frame(self, filename="robot pos", frame=-1):
         plt.figure()
-        plt.plot(self.x[:, frame], self.y[:, frame])
+        self.add_frame_to_plot(frame)
         plt.grid(True)
-        plt.axis('equal')
-        plt.xlim(-0.15, 0.15)
-        plt.ylim(-0.01, 0.2)
+        # plt.axis('equal')
+        plt.xlim(-0.5, 0.15)
+        plt.ylim(-0.1, 0.3)
         plt.savefig(filename)
         plt.close()
-
 
 def plot_trace(x, filename="trace", t=None):
     """NB t currently does nothing"""
