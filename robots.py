@@ -1,16 +1,20 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import logging
 
 def sind(x): return np.sin(np.radians(x))
 def cosd(x): return np.cos(np.radians(x))
 def asind(x): return np.degrees(np.arcsin(x))
 def acosd(x): return np.degrees(np.arccos(x))
 
+def differentiate(x, dt):
+    xdot = np.zeros(x.shape)
+    for i in range(1, x.shape[1]):
+        # xdot[:, i] = 2 * (x[:, i] - x[:, i-1]) / dt - xdot[:, i-1]
+        xdot[:, i] = (x[:, i] - x[:, i-1]) / dt
+    return xdot
+
 class TwoLegRobot():
     def __init__(
         self, L=0.1, M=0.1, dt=1e-3,
-        # t_lift=0.2, t_step=1.6,
         y_lift=0.01, x_step=-0.08, speed=0.05,
         x0_init=0, y0_init=0,
         theta0_init=30, theta1_init=120,
@@ -19,17 +23,15 @@ class TwoLegRobot():
         """Initialise a robot with both feet horizontal,
         IE links 1 and 4 are vertical, and theta1 + theta2 + theta3 = 180
         """
+        # Generic attributes:
         self.L = L
         self.M = M
         self.dt = dt
-        # self.t_lift = t_lift
-        # self.t_step = t_step
         self.y_lift = y_lift
         self.x_step = x_step
         self.speed = speed
         self.motion_counter = 0
 
-        # Initialise traces:
         # Array to store joint-angles over time:
         self.theta = np.zeros([3, 1])
         self.theta[0, 0] = theta0_init
@@ -49,16 +51,14 @@ class TwoLegRobot():
         self.y[2, 0] = self.y[1, 0] + L*cosd(theta0_init)
         self.y[3, 0] = self.y[2, 0] + L*cosd(theta0_init + theta1_init)
         self.y[4, 0] = self.y[3, 0] - L
-        # Velocities:
-        self.thetadot = np.zeros([3, 1])
-        self.xdot = np.zeros([5, 1])
-        self.ydot = np.zeros([5, 1])
-        # Accelerations:
-        self.thetadotdot = np.zeros([3, 1])
-        self.xdotdot = np.zeros([5, 1])
-        self.ydotdot = np.zeros([5, 1])
-        # Torques:
-        self.torque = np.zeros([3, 1])
+        # Arrays to store velocities, acclerations and torque:
+        self.thetadot = None
+        self.xdot = None
+        self.ydot = None
+        self.thetadotdot = None
+        self.xdotdot = None
+        self.ydotdot = None
+        self.torque = None
     
     def cubic_motion_trajectory(self, start_pos, distance, T):
         """Calculate motion trajectory with given start point, end point, and
@@ -104,26 +104,29 @@ class TwoLegRobot():
         x = np.zeros([5, N])
         y = np.zeros([5, N])
         theta = np.zeros([3, N])
-        # Horizontal positions of joints 0, 1, 3 and 4 remain fixed:
-        # (NB implicit broadcasting is used here)
+
+        # Create horizontal motion-trajectories for joints 0 and 1:
         if joint0x is None:
             x[0] = self.x[0, -1]
             x[1] = self.x[1, -1]
         else:
             x[0] = self.cubic_motion_trajectory(self.x[0, -1], joint0x, T)
             x[1] = x[0]
+        # Create horizontal motion-trajectories for joints 3 and 4:
         if joint4x is None:
             x[4] = self.x[4, -1]
             x[3] = self.x[3, -1]
         else:
             x[4] = self.cubic_motion_trajectory(self.x[4, -1], joint4x, T)
             x[3] = x[4]
+        # Create vertical motion-trajectories for joints 0 and 1:
         if joint0y is None:
             y[0] = self.y[0, -1]
             y[1] = self.y[1, -1]
         else:
             y[0] = self.cubic_motion_trajectory(self.y[0, -1], joint0y, T)
             y[1] = y[0] + self.L
+        # Create vertical motion-trajectories for joints 3 and 4:
         if joint4y is None:
             y[4] = self.y[4, -1]
             y[3] = self.y[3, -1]
@@ -134,7 +137,7 @@ class TwoLegRobot():
         # Calculate trajectories of joint angles and central joint:
         theta = self.affectors_to_angles(x, y, theta)
         x, y = self.angles_to_central_joint(x, y, theta)
-        # Update total trajectories:
+        # Update global trajectories:
         self.x = np.append(self.x, x, axis=1)
         self.y = np.append(self.y, y, axis=1)
         self.theta = np.append(self.theta, theta, axis=1)
@@ -196,8 +199,16 @@ class TwoLegRobot():
         self.lift_right(step_height + self.y_lift)
         self.step_right(self.x_step)
         self.lift_right(-self.y_lift)
-
-
+    
+    def set_vels_and_accs(self):
+        # Set velocities
+        self.xdot = differentiate(self.x, self.dt)
+        self.ydot = differentiate(self.y, self.dt)
+        self.thetadot = differentiate(self.theta, self.dt)
+        # Set accelerations
+        self.xdotdot = differentiate(self.xdot, self.dt)
+        self.ydotdot = differentiate(self.ydot, self.dt)
+        self.thetadotdot = differentiate(self.thetadot, self.dt)
 
 if __name__ == "__main__":
 

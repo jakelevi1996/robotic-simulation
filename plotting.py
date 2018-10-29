@@ -17,7 +17,7 @@ def plot_ground():
     x_ground = [-1.1, -.5, -.5, .2]
     y_ground_top = [.05, .05, 0, 0]
     y_ground_bottom = [-.1, -.1, -.1, -.1]
-    plt.fill_between(x_ground, y_ground_top, y_ground_bottom, 'b')
+    plt.fill_between(x_ground, y_ground_top, y_ground_bottom)
 
 def plot_robot_trajectory(x, y, L, dt, T=9, filename="robot trajectory"):
     plot_every = int(T / dt)
@@ -56,4 +56,3 @@ def plot_traces(
     plt.grid(True)
     plt.savefig(filename)
     plt.close()
-    
