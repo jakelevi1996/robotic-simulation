@@ -4,5 +4,6 @@ This repository is primarily for coursework submission to 4M20: 'Robotics' cours
 
 ## TODO
 
-- Change lists to np.ndarrays, with first dim referring to joint-number, 2nd dim referring to time-step. To set new time-step, append 5 zeros to end of x-array and y-array, then set each joint for the new time step individually. Likewise for speeds, accelerations, torques. Can make entire array for a given action, then concatenate onto the total
-- Add speeds
+- Add speeds (use numerical differentiation ?? Quantify dependence on dt ??)
+- Include equation of motion to model torques: if using exclusively joint positions, velocities, and accelerations, then don't need to use any angles, and don't need to assume that one foot is stuck to the floor ?????
+- Plot multiple traces on the same axes
