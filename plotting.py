@@ -42,17 +42,31 @@ def plot_frame(x, y, L, filename="robot pos", frame=-1):
 
 def plot_traces(
     dt, traces, filename="traces", title=None,
-    legend_prefix="", label_num_offset=0, xlims=None
+    legend_prefix="", label_num_offset=0, legend_entries=None, xlims=None
 ):
     plt.figure()
-    t = np.linspace(0, dt*traces.shape[1], traces.shape[1])
+    t = np.linspace(0, dt*traces[0].size, traces[0].size)
     labels = []
     for num, trace in enumerate(traces):
         plt.plot(t, trace)
         labels.append(legend_prefix + str(num + label_num_offset))
     if xlims is not None: plt.xlim(xlims)
     if title is not None: plt.title(title)
-    plt.legend(labels)
+    if legend_entries is not None: plt.legend(legend_entries)
+    else: plt.legend(labels)
+    plt.grid(True)
+    plt.savefig(filename)
+    plt.close()
+
+
+def plot_trace(
+    dt, trace, filename="trace", title=None, xlims=None
+):
+    plt.figure()
+    t = np.linspace(0, dt*trace.size, trace.size)
+    plt.plot(t, trace)
+    if xlims is not None: plt.xlim(xlims)
+    if title is not None: plt.title(title)
     plt.grid(True)
     plt.savefig(filename)
     plt.close()

@@ -7,14 +7,13 @@ def acosd(x): return np.degrees(np.arccos(x))
 
 def differentiate(x, dt):
     xdot = np.zeros(x.shape)
-    for i in range(1, x.shape[1]):
-        # xdot[:, i] = 2 * (x[:, i] - x[:, i-1]) / dt - xdot[:, i-1]
-        xdot[:, i] = (x[:, i] - x[:, i-1]) / dt
+    xdot[:, 1:] = (x[:, 1:] - x[:, :-1]) / dt
     return xdot
+    
 
 class TwoLegRobot():
     def __init__(
-        self, L=0.1, M=0.1, dt=1e-3,
+        self, L=0.1, M=0.1, g=9.81, dt=1e-3,
         y_lift=0.01, x_step=-0.08, speed=0.05,
         x0_init=0, y0_init=0,
         theta0_init=30, theta1_init=120,
@@ -26,6 +25,7 @@ class TwoLegRobot():
         # Generic attributes:
         self.L = L
         self.M = M
+        self.g = g
         self.dt = dt
         self.y_lift = y_lift
         self.x_step = x_step
@@ -51,15 +51,16 @@ class TwoLegRobot():
         self.y[2, 0] = self.y[1, 0] + L*cosd(theta0_init)
         self.y[3, 0] = self.y[2, 0] + L*cosd(theta0_init + theta1_init)
         self.y[4, 0] = self.y[3, 0] - L
-        # Arrays to store velocities, acclerations and torque:
-        self.thetadot = None
-        self.xdot = None
-        self.ydot = None
-        self.thetadotdot = None
-        self.xdotdot = None
-        self.ydotdot = None
-        self.torque = None
+        # # Arrays to store velocities, acclerations and torque:
+        # self.thetadot = None
+        # self.xdot = None
+        # self.ydot = None
+        # self.thetadotdot = None
+        # self.xdotdot = None
+        # self.ydotdot = None
+        # self.torque = None
     
+    # The following 3 methods could be defined outside the scope of the class:
     def cubic_motion_trajectory(self, start_pos, distance, T):
         """Calculate motion trajectory with given start point, end point, and
         time-period, using cubic motion control (IE quadratic velocity) with
@@ -68,12 +69,6 @@ class TwoLegRobot():
         N = int(T / self.dt)
         t = np.linspace(0, T, N)
         return distance*(t**2)*(3*T - 2*t)/(T**3) + start_pos
-    
-    def quadratic_velocity_trajectory(self, ):
-        pass
-    
-    def linear_acceleration_trajectory(self, ):
-        pass
 
     def affectors_to_angles(self, x, y, theta):
         # Calculate distance between end affectors:
@@ -204,11 +199,28 @@ class TwoLegRobot():
         # Set velocities
         self.xdot = differentiate(self.x, self.dt)
         self.ydot = differentiate(self.y, self.dt)
-        self.thetadot = differentiate(self.theta, self.dt)
+        self.thetadot = np.radians(differentiate(self.theta, self.dt))
         # Set accelerations
         self.xdotdot = differentiate(self.xdot, self.dt)
         self.ydotdot = differentiate(self.ydot, self.dt)
         self.thetadotdot = differentiate(self.thetadot, self.dt)
+        # Calculate kinetic energy
+        self.kinetic_energy = 0.5 * self.M * sum([
+            np.square(self.xdot[1]),
+            np.square(self.ydot[1]),
+            np.square((self.xdot[1] + self.xdot[2])/2),
+            np.square((self.ydot[1] + self.ydot[2])/2),
+            np.square((self.xdot[2] + self.xdot[3])/2),
+            np.square((self.ydot[2] + self.ydot[3])/2),
+            np.square(self.xdot[3]),
+            np.square(self.ydot[3]),
+        ])
+        # Calculate relative potential energy
+        self.potential_energy = self.M * self.g * sum([
+            1.5 * self.y[1], self.y[2], 1.5 * self.y[3]
+        ])
+        self.potential_energy -= self.potential_energy.min()
+
 
 if __name__ == "__main__":
 
