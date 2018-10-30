@@ -1,23 +1,31 @@
 import numpy as np
 
+# A few generic functions:
 def sind(x): return np.sin(np.radians(x))
 def cosd(x): return np.cos(np.radians(x))
 def asind(x): return np.degrees(np.arcsin(x))
 def acosd(x): return np.degrees(np.arccos(x))
+
+def cubic_motion_trajectory(start_pos, distance, T, N):
+    """Calculate motion trajectory with given start point, end point,
+    time-period, and number of points, using cubic motion control (IE
+    quadratic velocity) with zero start and end-velocity
+    """
+    t = np.linspace(0, T, N)
+    return distance*(t**2)*(3*T - 2*t)/(T**3) + start_pos
 
 def differentiate(x, dt):
     xdot = np.zeros(x.shape)
     xdot[:, 1:] = (x[:, 1:] - x[:, :-1]) / dt
     return xdot
     
-
+# Main class:
 class TwoLegRobot():
     def __init__(
         self, L=0.1, M=0.1, g=9.81, dt=1e-3,
         y_lift=0.01, x_step=-0.08, speed=0.05,
         x0_init=0, y0_init=0,
         theta0_init=30, theta1_init=120,
-        # foot1_clamped=True, 
     ):
         """Initialise a robot with both feet horizontal,
         IE links 1 and 4 are vertical, and theta1 + theta2 + theta3 = 180
@@ -51,24 +59,17 @@ class TwoLegRobot():
         self.y[2, 0] = self.y[1, 0] + L*cosd(theta0_init)
         self.y[3, 0] = self.y[2, 0] + L*cosd(theta0_init + theta1_init)
         self.y[4, 0] = self.y[3, 0] - L
-        # # Arrays to store velocities, acclerations and torque:
-        # self.thetadot = None
-        # self.xdot = None
-        # self.ydot = None
-        # self.thetadotdot = None
-        # self.xdotdot = None
-        # self.ydotdot = None
-        # self.torque = None
-    
-    # The following 3 methods could be defined outside the scope of the class:
-    def cubic_motion_trajectory(self, start_pos, distance, T):
-        """Calculate motion trajectory with given start point, end point, and
-        time-period, using cubic motion control (IE quadratic velocity) with
-        zero start and end-velocity
-        """
-        N = int(T / self.dt)
-        t = np.linspace(0, T, N)
-        return distance*(t**2)*(3*T - 2*t)/(T**3) + start_pos
+        # Arrays to store which foot is clamped to the ground:
+        self.foot1_clamped = np.array([True])
+        self.foot2_clamped = np.array([True])
+        # Arrays to store velocities, acclerations and torque:
+        self.thetadot = None
+        self.xdot = None
+        self.ydot = None
+        self.thetadotdot = None
+        self.xdotdot = None
+        self.ydotdot = None
+        self.torque = None
 
     def affectors_to_angles(self, x, y, theta):
         # Calculate distance between end affectors:
@@ -99,35 +100,42 @@ class TwoLegRobot():
         x = np.zeros([5, N])
         y = np.zeros([5, N])
         theta = np.zeros([3, N])
+        foot1_clamped = np.zeros(N, dtype=bool)
+        foot2_clamped = np.zeros(N, dtype=bool)
 
         # Create horizontal motion-trajectories for joints 0 and 1:
         if joint0x is None:
             x[0] = self.x[0, -1]
             x[1] = self.x[1, -1]
         else:
-            x[0] = self.cubic_motion_trajectory(self.x[0, -1], joint0x, T)
+            x[0] = cubic_motion_trajectory(self.x[0, -1], joint0x, T, N)
             x[1] = x[0]
-        # Create horizontal motion-trajectories for joints 3 and 4:
-        if joint4x is None:
-            x[4] = self.x[4, -1]
-            x[3] = self.x[3, -1]
-        else:
-            x[4] = self.cubic_motion_trajectory(self.x[4, -1], joint4x, T)
-            x[3] = x[4]
         # Create vertical motion-trajectories for joints 0 and 1:
         if joint0y is None:
             y[0] = self.y[0, -1]
             y[1] = self.y[1, -1]
         else:
-            y[0] = self.cubic_motion_trajectory(self.y[0, -1], joint0y, T)
+            y[0] = cubic_motion_trajectory(self.y[0, -1], joint0y, T, N)
             y[1] = y[0] + self.L
+        # Store state of foot 1:
+        if joint0x is None and joint0y is None: foot1_clamped[:] = True
+        
+        # Create horizontal motion-trajectories for joints 3 and 4:
+        if joint4x is None:
+            x[4] = self.x[4, -1]
+            x[3] = self.x[3, -1]
+        else:
+            x[4] = cubic_motion_trajectory(self.x[4, -1], joint4x, T, N)
+            x[3] = x[4]
         # Create vertical motion-trajectories for joints 3 and 4:
         if joint4y is None:
             y[4] = self.y[4, -1]
             y[3] = self.y[3, -1]
         else:
-            y[4] = self.cubic_motion_trajectory(self.y[4, -1], joint4y, T)
+            y[4] = cubic_motion_trajectory(self.y[4, -1], joint4y, T, N)
             y[3] = y[4] + self.L
+        # Store state of foot 2:
+        if joint4x is None and joint4y is None: foot2_clamped[:] = True
 
         # Calculate trajectories of joint angles and central joint:
         theta = self.affectors_to_angles(x, y, theta)
@@ -136,6 +144,8 @@ class TwoLegRobot():
         self.x = np.append(self.x, x, axis=1)
         self.y = np.append(self.y, y, axis=1)
         self.theta = np.append(self.theta, theta, axis=1)
+        self.foot1_clamped = np.append(self.foot1_clamped, foot1_clamped)
+        self.foot2_clamped = np.append(self.foot2_clamped, foot2_clamped)
         self.motion_counter += 1
     
     def lift_left(self, y_lift):
@@ -220,6 +230,43 @@ class TwoLegRobot():
             1.5 * self.y[1], self.y[2], 1.5 * self.y[3]
         ])
         self.potential_energy -= self.potential_energy.min()
+    
+    def set_static_torques(self):
+        """Calculate static torques, assuming kinetic energy, angular momentum
+        etc are negligible, and the only relevant moments are due to gravity
+
+        Sign convention: clockwise_positive (consistent with theta)
+
+        See https://docs.python.org/3/library/stdtypes.html and
+        https://docs.scipy.org/doc/numpy-1.15.1/reference/routines.bitwise.html
+        for info on bitwise operations
+        """
+        err_msg = "Can't calculate static torque when neither foot is clamped"
+        if not all(self.foot1_clamped | self.foot2_clamped):
+            raise ValueError(err_msg)
+        
+        # Initialise torque array
+        self.torque = np.zeros(self.theta.shape)
+
+        # Indices when foot 1 is clamped and foot 2 is not clamped:
+        inds = self.foot1_clamped & np.invert(self.foot2_clamped)
+        self.torque[0, inds] = self.M * self.g * (
+            2.5 * self.x[1, inds] - self.x[2, inds] - 1.5 * self.x[3, inds]
+        )
+        self.torque[1, inds] = self.M * self.g * (
+            1.5 * self.x[2, inds] - 1.5 * self.x[3, inds]
+        )
+
+        # Indices when foot 1 is not clamped and foot 2 clamped:
+        inds = np.invert(self.foot1_clamped) & self.foot2_clamped
+        self.torque[2, inds] = self.M * self.g * (
+            2.5 * self.x[3, inds] - self.x[2, inds] - 1.5 * self.x[1, inds]
+        )
+        self.torque[1, inds] = self.M * self.g * (
+            1.5 * self.x[2, inds] - 1.5 * self.x[1, inds]
+        )
+        
+
 
 
 if __name__ == "__main__":
@@ -232,3 +279,8 @@ if __name__ == "__main__":
     r.walk_distance(remaining_distance)
 
     print(r.x.shape)
+    print(r.foot1_clamped.shape)
+    print(r.foot2_clamped.shape)
+    print(r.foot1_clamped == r.foot2_clamped)
+
+    r.set_static_torques()

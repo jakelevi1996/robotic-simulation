@@ -9,12 +9,14 @@ if __name__ == "__main__":
     logging.info("Creating robot...")
     r = TwoLegRobot()
     # r = TwoLegRobot(speed=0.5)
+    # r = TwoLegRobot(y_lift=0.005)
     
     logging.info("Navigating terrain...")
-    r.walk_distance(-0.49)
-    r.navigate_step(0.05)
-    remaining_distance = -1.0 - r.x[0, -1]
-    r.walk_distance(remaining_distance)
+    r.walk_distance(-0.08)
+    # r.walk_distance(-0.49)
+    # r.navigate_step(0.05)
+    # remaining_distance = -1.0 - r.x[0, -1]
+    # r.walk_distance(remaining_distance)
 
     logging.info("Creating plots...")
     plotting.plot_robot_trajectory(r.x, r.y, r.L, r.dt)
@@ -69,5 +71,15 @@ if __name__ == "__main__":
         r.dt, [r.kinetic_energy, r.potential_energy], "images/energy",
         "Energy", legend_entries=["Kinetic", "Potential"], xlims=xlims
     )
+
+    logging.info("Calculating static torques...")
+    r.set_static_torques()
+
+    logging.info("Plotting torques...")
+    plotting.plot_traces(
+        r.dt, r.torque, "images/torque", "Motor torques",
+        "torque_", xlims=xlims
+    )
+    
 
     print("Time taken to reach goal = {}s".format(r.dt*r.x.shape[1]))
