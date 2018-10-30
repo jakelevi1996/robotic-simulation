@@ -265,6 +265,14 @@ class TwoLegRobot():
         self.torque[1, inds] = self.M * self.g * (
             1.5 * self.x[2, inds] - 1.5 * self.x[1, inds]
         )
+
+    def set_power(self):
+        self.power = self.torque * self.thetadot
+    
+    def get_energy_consumption(self):
+        # Integrate power over time:
+        # (but don't let negative powers 'charge up the batteries')
+        return self.dt * np.sum(np.maximum(self.power, 0))
         
 
 

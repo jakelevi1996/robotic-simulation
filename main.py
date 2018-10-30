@@ -18,6 +18,11 @@ if __name__ == "__main__":
     # remaining_distance = -1.0 - r.x[0, -1]
     # r.walk_distance(remaining_distance)
 
+    logging.info("Calculating derivatives, torques etc...")
+    r.set_vels_and_accs()
+    r.set_static_torques()
+    r.set_power()
+
     logging.info("Creating plots...")
     plotting.plot_robot_trajectory(r.x, r.y, r.L, r.dt)
     xlims = None
@@ -34,9 +39,6 @@ if __name__ == "__main__":
         r.dt, r.theta[0:2], "images/theta", "Joint-angles",
         "theta_", xlims=xlims
     )
-
-    logging.info("Calculating derivatives...")
-    r.set_vels_and_accs()
 
     logging.info("Plotting velocities...")
     plotting.plot_traces(
@@ -66,20 +68,24 @@ if __name__ == "__main__":
         "Joint anglular accelerations", "thetadotdot_", xlims=xlims
     )
 
-    logging.info("Plotting energies...")
+    logging.info("Plotting energies, torques, power...")
     plotting.plot_traces(
         r.dt, [r.kinetic_energy, r.potential_energy], "images/energy",
         "Energy", legend_entries=["Kinetic", "Potential"], xlims=xlims
     )
 
-    logging.info("Calculating static torques...")
-    r.set_static_torques()
-
-    logging.info("Plotting torques...")
     plotting.plot_traces(
         r.dt, r.torque, "images/torque", "Motor torques",
         "torque_", xlims=xlims
     )
+
+    plotting.plot_traces(
+        r.dt, r.power, "images/power", "Instantaneous power",
+        "motor_", xlims=xlims
+    )
+
+
     
 
-    print("Time taken to reach goal = {}s".format(r.dt*r.x.shape[1]))
+    print("Time taken to reach goal = {} s".format(r.dt*r.x.shape[1]))
+    print("Energy consumption = {:.3f} J".format(r.get_energy_consumption()))
