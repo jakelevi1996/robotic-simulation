@@ -1,23 +1,11 @@
 import numpy as np
+from traces import cubic_motion_trajectory
 
 # A few generic functions:
 def sind(x): return np.sin(np.radians(x))
 def cosd(x): return np.cos(np.radians(x))
 def asind(x): return np.degrees(np.arcsin(x))
 def acosd(x): return np.degrees(np.arccos(x))
-
-def cubic_motion_trajectory(start_pos, distance, T, N):
-    """Calculate motion trajectory with given start point, end point,
-    time-period, and number of points, using cubic motion control (IE
-    quadratic velocity) with zero start and end-velocity
-    """
-    t = np.linspace(0, T, N)
-    return distance*(t**2)*(3*T - 2*t)/(T**3) + start_pos
-
-def differentiate(x, dt):
-    xdot = np.zeros(x.shape)
-    xdot[:, 1:] = (x[:, 1:] - x[:, :-1]) / dt
-    return xdot
     
 # Main class:
 class TwoLegRobot():
@@ -62,14 +50,6 @@ class TwoLegRobot():
         # Arrays to store which foot is clamped to the ground:
         self.foot1_clamped = np.array([True])
         self.foot2_clamped = np.array([True])
-        # Arrays to store velocities, acclerations and torque:
-        self.thetadot = None
-        self.xdot = None
-        self.ydot = None
-        self.thetadotdot = None
-        self.xdotdot = None
-        self.ydotdot = None
-        self.torque = None
 
     def affectors_to_angles(self, x, y, theta):
         # Calculate distance between end affectors:
@@ -204,78 +184,6 @@ class TwoLegRobot():
         self.lift_right(step_height + self.y_lift)
         self.step_right(self.x_step)
         self.lift_right(-self.y_lift)
-    
-    def set_vels_and_accs(self):
-        # Set velocities
-        self.xdot = differentiate(self.x, self.dt)
-        self.ydot = differentiate(self.y, self.dt)
-        self.thetadot = np.radians(differentiate(self.theta, self.dt))
-        # Set accelerations
-        self.xdotdot = differentiate(self.xdot, self.dt)
-        self.ydotdot = differentiate(self.ydot, self.dt)
-        self.thetadotdot = differentiate(self.thetadot, self.dt)
-        # Calculate kinetic energy
-        self.kinetic_energy = 0.5 * self.M * sum([
-            np.square(self.xdot[1]),
-            np.square(self.ydot[1]),
-            np.square((self.xdot[1] + self.xdot[2])/2),
-            np.square((self.ydot[1] + self.ydot[2])/2),
-            np.square((self.xdot[2] + self.xdot[3])/2),
-            np.square((self.ydot[2] + self.ydot[3])/2),
-            np.square(self.xdot[3]),
-            np.square(self.ydot[3]),
-        ])
-        # Calculate relative potential energy
-        self.potential_energy = self.M * self.g * sum([
-            1.5 * self.y[1], self.y[2], 1.5 * self.y[3]
-        ])
-        self.potential_energy -= self.potential_energy.min()
-    
-    def set_static_torques(self):
-        """Calculate static torques, assuming kinetic energy, angular momentum
-        etc are negligible, and the only relevant moments are due to gravity
-
-        Sign convention: clockwise_positive (consistent with theta)
-
-        See https://docs.python.org/3/library/stdtypes.html and
-        https://docs.scipy.org/doc/numpy-1.15.1/reference/routines.bitwise.html
-        for info on bitwise operations
-        """
-        err_msg = "Can't calculate static torque when neither foot is clamped"
-        if not all(self.foot1_clamped | self.foot2_clamped):
-            raise ValueError(err_msg)
-        
-        # Initialise torque array
-        self.torque = np.zeros(self.theta.shape)
-
-        # Indices when foot 1 is clamped and foot 2 is not clamped:
-        inds = self.foot1_clamped & np.invert(self.foot2_clamped)
-        self.torque[0, inds] = self.M * self.g * (
-            2.5 * self.x[1, inds] - self.x[2, inds] - 1.5 * self.x[3, inds]
-        )
-        self.torque[1, inds] = self.M * self.g * (
-            1.5 * self.x[2, inds] - 1.5 * self.x[3, inds]
-        )
-
-        # Indices when foot 1 is not clamped and foot 2 clamped:
-        inds = np.invert(self.foot1_clamped) & self.foot2_clamped
-        self.torque[2, inds] = self.M * self.g * (
-            2.5 * self.x[3, inds] - self.x[2, inds] - 1.5 * self.x[1, inds]
-        )
-        self.torque[1, inds] = self.M * self.g * (
-            1.5 * self.x[2, inds] - 1.5 * self.x[1, inds]
-        )
-
-    def set_power(self):
-        self.power = self.torque * self.thetadot
-    
-    def get_energy_consumption(self):
-        # Integrate power over time:
-        # (but don't let negative powers 'charge up the batteries')
-        return self.dt * np.sum(np.maximum(self.power, 0))
-        
-
-
 
 if __name__ == "__main__":
 
@@ -290,5 +198,4 @@ if __name__ == "__main__":
     print(r.foot1_clamped.shape)
     print(r.foot2_clamped.shape)
     print(r.foot1_clamped == r.foot2_clamped)
-
-    r.set_static_torques()
+    

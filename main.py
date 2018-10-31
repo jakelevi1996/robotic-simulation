@@ -1,7 +1,9 @@
-from robots import TwoLegRobot
 import numpy as np
-import plotting
 import logging
+
+from robots import TwoLegRobot
+import traces
+import plotting
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
@@ -19,9 +21,16 @@ if __name__ == "__main__":
     # r.walk_distance(remaining_distance)
 
     logging.info("Calculating derivatives, torques etc...")
-    r.set_vels_and_accs()
-    r.set_static_torques()
-    r.set_power()
+    xdot, ydot, thetadot = traces.derivatives(r.x, r.y, r.theta, r.dt)
+    xdotdot, ydotdot, thetadotdot = traces.derivatives(
+        xdot, ydot, thetadot, r.dt
+    )
+    ke, pe = traces.energies(r.x, r.y, xdot, ydot, r.M, r.g)
+    torque = traces.static_torques(
+        r.x, r.M, r.g, r.foot1_clamped, r.foot2_clamped
+    )
+    power = traces.instantaneous_power(torque, thetadot)
+    total_energy = traces.get_energy_consumption(power, r.dt)
 
     logging.info("Creating plots...")
     plotting.plot_robot_trajectory(r.x, r.y, r.L, r.dt)
@@ -42,50 +51,51 @@ if __name__ == "__main__":
 
     logging.info("Plotting velocities...")
     plotting.plot_traces(
-        r.dt, r.xdot[1:4], "images/xdot", "Horizontal joint-velocities",
+        r.dt, xdot[1:4], "images/xdot", "Horizontal joint-velocities",
         "xdot_", 1, xlims=xlims
     )
     plotting.plot_traces(
-        r.dt, r.ydot[1:4], "images/ydot", "Vertical joint-velocities",
+        r.dt, ydot[1:4], "images/ydot", "Vertical joint-velocities",
         "ydot_", 1, xlims=xlims
     )
+    # plotting.plot_traces(
+    #     r.dt, thetadot[0:2], "images/thetadot", "Joint anglular velocities",
+    #     "thetadot_", xlims=xlims
+    # )
     plotting.plot_traces(
-        r.dt, r.thetadot[0:2], "images/thetadot", "Joint anglular velocities",
+        r.dt, thetadot, "images/thetadot", "Joint anglular velocities",
         "thetadot_", xlims=xlims
     )
 
     logging.info("Plotting accelerations...")
     plotting.plot_traces(
-        r.dt, r.xdotdot[1:4], "images/xdotdot",
+        r.dt, xdotdot[1:4], "images/xdotdot",
         "Horizontal joint-accelerations", "xdotdot_", 1, xlims=xlims
     )
     plotting.plot_traces(
-        r.dt, r.ydotdot[1:4], "images/ydotdot",
+        r.dt, ydotdot[1:4], "images/ydotdot",
         "Vertical joint-accelerations", "ydotdot_", 1, xlims=xlims
     )
     plotting.plot_traces(
-        r.dt, r.thetadotdot[0:2], "images/thetadotdot",
+        r.dt, thetadotdot[0:2], "images/thetadotdot",
         "Joint anglular accelerations", "thetadotdot_", xlims=xlims
     )
 
     logging.info("Plotting energies, torques, power...")
     plotting.plot_traces(
-        r.dt, [r.kinetic_energy, r.potential_energy], "images/energy",
+        r.dt, [ke, pe], "images/energy",
         "Energy", legend_entries=["Kinetic", "Potential"], xlims=xlims
     )
 
     plotting.plot_traces(
-        r.dt, r.torque, "images/torque", "Motor torques",
+        r.dt, torque, "images/torque", "Motor torques",
         "torque_", xlims=xlims
     )
 
     plotting.plot_traces(
-        r.dt, r.power, "images/power", "Instantaneous power",
+        r.dt, power, "images/power", "Instantaneous power",
         "motor_", xlims=xlims
     )
 
-
-    
-
     print("Time taken to reach goal = {} s".format(r.dt*r.x.shape[1]))
-    print("Energy consumption = {:.3f} J".format(r.get_energy_consumption()))
+    print("Energy consumption = {:.3f} J".format(total_energy))
