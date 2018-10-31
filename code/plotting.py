@@ -19,7 +19,9 @@ def plot_ground():
     y_ground_bottom = [-.1, -.1, -.1, -.1]
     plt.fill_between(x_ground, y_ground_top, y_ground_bottom)
 
-def plot_robot_trajectory(x, y, L, dt, T=9, filename="robot trajectory"):
+def plot_robot_trajectory(
+    x, y, L, dt, T=9, filename="images/robot trajectory"
+):
     plot_every = int(T / dt)
     plt.figure()
     for f in range(0, x.shape[1], plot_every):
@@ -54,6 +56,7 @@ def plot_traces(
     if title is not None: plt.title(title)
     if legend_entries is not None: plt.legend(legend_entries)
     else: plt.legend(labels)
+    plt.xlabel("Time (s)")
     plt.grid(True)
     plt.savefig(filename)
     plt.close()

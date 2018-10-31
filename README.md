@@ -10,6 +10,7 @@ The top-level directory contains the following files and folders:
   - `robots.py`: Module containing the class `TwoLegRobot` and its methods for navigation (EG `navigate_step`)
   - `traces.py`: Module containing functions which calculate traces such as `cubic_motion_trajectory` and `instantaneous_power`
   - `plotting.py`: functions for plotting robot trajectories (EG `plot_robot_trajectory`) and traces (EG `plot_traces`)
+  - `main.py`: main script for using these modules
 - **Images** folder:
   - Some images, go have a look
 - `README.md`: supposedly a complete description of the repository
