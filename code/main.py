@@ -14,11 +14,11 @@ if __name__ == "__main__":
     # r = TwoLegRobot(y_lift=0.005)
     
     logging.info("Navigating terrain...")
-    r.walk_distance(-0.08)
-    # r.walk_distance(-0.49)
-    # r.navigate_step(0.05)
-    # remaining_distance = -1.0 - r.x[0, -1]
-    # r.walk_distance(remaining_distance)
+    # r.walk_distance(-0.08)
+    r.walk_distance(-0.49)
+    r.navigate_step(0.05)
+    remaining_distance = -1.0 - r.x[0, -1]
+    r.walk_distance(remaining_distance)
 
     logging.info("Calculating derivatives, torques etc...")
     xdot, ydot, thetadot = traces.derivatives(r.x, r.y, r.theta, r.dt)
