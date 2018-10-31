@@ -33,6 +33,7 @@ if __name__ == "__main__":
         torque, thetadot, r.foot1_clamped, r.foot2_clamped
     )
     total_energy = traces.get_energy_consumption(power, r.dt)
+    max_torques = traces.get_max_torques(torque)
 
     logging.info("Creating plots...")
     plotting.plot_robot_trajectory(r.x, r.y, r.L, r.dt)
@@ -101,3 +102,4 @@ if __name__ == "__main__":
 
     print("Time taken to reach goal = {} s".format(r.dt*r.x.shape[1]))
     print("Energy consumption = {:.3f} J".format(total_energy))
+    print("Maximum torques required = {} Nm".format(max_torques))

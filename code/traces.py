@@ -87,3 +87,6 @@ def get_energy_consumption(instantaneous_power, dt):
     # Integrate power over time (but don't let negative powers 'charge up the
     # batteries'):
     return np.sum(np.maximum(instantaneous_power, 0)) * dt
+
+def get_max_torques(torque):
+    return (abs(torque)).max(axis=1)
