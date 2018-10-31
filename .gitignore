@@ -1,5 +1,8 @@
-# Ignore images
-**.png
+# Ignore images except specific subfolders
+images/*
+!images/full terrain/
+!images/single step/
+!images/robot trajectory.png
 
 temp.py
 
