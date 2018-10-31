@@ -29,7 +29,9 @@ if __name__ == "__main__":
     torque = traces.static_torques(
         r.x, r.M, r.g, r.foot1_clamped, r.foot2_clamped
     )
-    power = traces.instantaneous_power(torque, thetadot)
+    power = traces.instantaneous_power(
+        torque, thetadot, r.foot1_clamped, r.foot2_clamped
+    )
     total_energy = traces.get_energy_consumption(power, r.dt)
 
     logging.info("Creating plots...")

@@ -64,10 +64,26 @@ def static_torques(x, M, g, foot1_clamped, foot2_clamped):
 
     return torque
 
-def instantaneous_power(torque, thetadot):
-    return torque * thetadot
+def instantaneous_power(torque, thetadot, foot1_clamped, foot2_clamped):
+    """Calculate instantaneous power, found by multiplying torque by angular
+    velocity. NB angular velocity must be flipped when foot 1 is not clamped
+    and foot 2 is clamped, because although the sign convention remains
+    consistent, in this case the link which is considered stationary and the
+    link which is considered rotating relative to that stationary link are
+    exchanged, and so signs must be flipped to maintain a consistent sign
+    convention and return correct power values.
+    """
+    # Indices when foot 1 is not clamped and foot 2 is clamped:
+    inds = ~foot1_clamped & foot2_clamped
+    # Create array which is flipped when foot 1 is not clamped and foot 2 is
+    # clamped and is otherwise the same:
+    thetadot_flipped = np.zeros(thetadot.shape)
+    thetadot_flipped[:, inds] = -thetadot[:, inds]
+    thetadot_flipped[:, ~inds] = thetadot[:, ~inds]
+
+    return torque * thetadot_flipped
 
 def get_energy_consumption(instantaneous_power, dt):
-    # Integrate power over time:
-    # (but don't let negative powers 'charge up the batteries')
-    return dt * np.sum(np.maximum(instantaneous_power, 0))
+    # Integrate power over time (but don't let negative powers 'charge up the
+    # batteries'):
+    return np.sum(np.maximum(instantaneous_power, 0)) * dt
