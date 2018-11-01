@@ -13,13 +13,13 @@ def differentiate(x, dt):
     xdot[:, 1:] = (x[:, 1:] - x[:, :-1]) / dt
     return xdot
 
-def derivatives(x, y, theta, dt):
+def derivatives(x, y, theta_radians, dt):
     """Use this function to calculate velocties and accelerations of horizontal
     joint-positions, vertical joint-positions, and joint-angles
     """
     xdot = differentiate(x, dt)
     ydot = differentiate(y, dt)
-    thetadot = differentiate(np.radians(theta), dt)
+    thetadot = differentiate(theta_radians, dt)
     return xdot, ydot, thetadot
 
 def energies(x, y, xdot, ydot, M, g):
@@ -37,8 +37,10 @@ def energies(x, y, xdot, ydot, M, g):
     # Calculate relative potential energy
     potential_energy = M * g * (1.5*y[1] + y[2] + 1.5*y[3])
     potential_energy -= potential_energy.min()
+    # Change in potential energy:
+    dPE = potential_energy[-1] - potential_energy[0]
 
-    return kinetic_energy, potential_energy
+    return kinetic_energy, potential_energy, dPE
 
 def static_torques(x, M, g, foot1_clamped, foot2_clamped):
     """Calculate static torques, assuming kinetic energy, angular momentum
@@ -83,10 +85,10 @@ def instantaneous_power(torque, thetadot, foot1_clamped, foot2_clamped):
 
     return torque * thetadot_flipped
 
-def get_energy_consumption(instantaneous_power, dt):
+def energy_consumption(instantaneous_power, dt):
     # Integrate power over time (but don't let negative powers 'charge up the
     # batteries'):
     return np.sum(np.maximum(instantaneous_power, 0)) * dt
 
-def get_max_torques(torque):
+def max_torques(torque):
     return (abs(torque)).max(axis=1)

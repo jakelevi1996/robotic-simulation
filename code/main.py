@@ -9,10 +9,10 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     logging.info("Creating robot...")
-    r = TwoLegRobot()
-    # r = TwoLegRobot(speed=0.5)
+    # r = TwoLegRobot()
+    r = TwoLegRobot(speed=0.5)
     # r = TwoLegRobot(y_lift=0.005)
-    
+
     logging.info("Navigating terrain...")
     # r.walk_distance(-0.08)
     r.walk_distance(-0.49)
@@ -21,24 +21,28 @@ if __name__ == "__main__":
     r.walk_distance(remaining_distance)
 
     logging.info("Calculating derivatives, torques etc...")
-    xdot, ydot, thetadot = traces.derivatives(r.x, r.y, r.theta, r.dt)
+    xdot, ydot, thetadot = traces.derivatives(
+        r.x, r.y, np.radians(r.theta), r.dt
+    )
     xdotdot, ydotdot, thetadotdot = traces.derivatives(
         xdot, ydot, thetadot, r.dt
     )
-    ke, pe = traces.energies(r.x, r.y, xdot, ydot, r.M, r.g)
+    ke, pe, dPE = traces.energies(r.x, r.y, xdot, ydot, r.M, r.g)
     torque = traces.static_torques(
         r.x, r.M, r.g, r.foot1_clamped, r.foot2_clamped
     )
     power = traces.instantaneous_power(
         torque, thetadot, r.foot1_clamped, r.foot2_clamped
     )
-    total_energy = traces.get_energy_consumption(power, r.dt)
-    max_torques = traces.get_max_torques(torque)
+    total_energy = traces.energy_consumption(power, r.dt)
+    max_torques = traces.max_torques(torque)
 
-    logging.info("Creating plots...")
+    logging.info("Plotting trajectory...")
     plotting.plot_robot_trajectory(r.x, r.y, r.L, r.dt)
     xlims = None
     # xlims = [0, 2]
+
+    logging.info("Plotting positions...")
     plotting.plot_traces(
         r.dt, r.x[1:4], "images/x", "Horizontal joint-positions",
         "x_", 1, xlims=xlims
@@ -101,5 +105,7 @@ if __name__ == "__main__":
     )
 
     print("Time taken to reach goal = {} s".format(r.dt*r.x.shape[1]))
-    print("Energy consumption = {:.3f} J".format(total_energy))
     print("Maximum torques required = {} Nm".format(max_torques))
+    print("Energy consumption = {:.3f} J".format(total_energy))
+    print("Total change in GPE = {:.3f} J".format(dPE))
+    print("Efficiency = {:.3f} %".format(100.0 * dPE / total_energy))
