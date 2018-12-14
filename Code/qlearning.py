@@ -81,54 +81,7 @@ class QlearningRobot():
             if action == 0: self.y_left += 1
             elif action == 1: self.y_left -= 1
             elif action == 2: self.x_left += 1
-            else: self.x_left -= 1
-        
-    def choose_optimal_action(self):
-        # Store old coordinates (used later for updating Q-tables):
-        self.old_left_xy = [self.x_left, self.y_left]
-        self.old_right_xy = [self.x_right, self.y_right]
-
-        if self.y_left == 0 and self.y_right == 0:
-            # Both feet are on the floor, so lift one up:
-            action = np.argmin([
-                self.Q_left[self.x_left, self.y_left + 1],
-                self.Q_right[self.x_right, self.y_right + 1]
-            ])
-            # action = np.random.choice(2, p=probs)
-            print(action)
-            if action == 0: self.y_left += 1
-            else: self.y_right += 1
-        
-        elif self.y_left == 0:
-            # Left foot is on the floor, so move the right foot:
-            action = np.argmin([
-                self.Q_right[self.x_right, self.y_right + 1],
-                self.Q_right[self.x_right, self.y_right - 1],
-                self.Q_right[self.x_right + 1, self.y_right],
-                self.Q_right[self.x_right - 1, self.y_right],
-            ])
-            print(action)
-            # action = np.random.choice(4, p=probs)
-            if action == 0: self.y_right += 1
-            elif action == 1: self.y_right -= 1
-            elif action == 2: self.x_right += 1
-            else: self.x_right -= 1
-        
-        else:
-            # Right foot is on the floor, so move the left foot:
-            action = np.argmin([
-                self.Q_left[self.x_left, self.y_left + 1],
-                self.Q_left[self.x_left, self.y_left - 1],
-                self.Q_left[self.x_left + 1, self.y_left],
-                self.Q_left[self.x_left - 1, self.y_left],
-            ])
-            print(action)
-            # action = np.random.choice(4, p=probs)
-            if action == 0: self.y_left += 1
-            elif action == 1: self.y_left -= 1
-            elif action == 2: self.x_left += 1
-            else: self.x_left -= 1
-        
+            else: self.x_left -= 1        
     
     def reward_function(self):
         motor_distance_x = self.dx * (self.x_right - self.x_left)
@@ -176,17 +129,6 @@ class QlearningRobot():
                 if reward == -1: break
             plt.plot(reward_list, 'b', alpha=0.2)
         
-        for _ in range(n_evals):
-            self.reset_position()
-            reward_list = []
-            for _ in range(n_t_steps):
-                self.choose_optimal_action()
-                reward = self.reward_function()
-                reward_list.append(reward)
-                self.update_q_tables(alpha, gamma, reward)
-                if reward == -1: break
-            plt.plot(reward_list, 'r', alpha=0.6)
-
         plt.grid(True)
         plt.xlabel("t")
         plt.ylabel("Reward")
