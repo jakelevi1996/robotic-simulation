@@ -13,30 +13,35 @@ def add_frame_to_plot(x, y, L, frame=-1, alpha=1):
     # Plot motors:
     plt.plot(x[2:5, frame], y[2:5, frame], 'ro', alpha=alpha)
 
-def plot_ground():
-    x_ground = [-1.1, -.5, -.5, .2]
-    y_ground_top = [.05, .05, 0, 0]
-    y_ground_bottom = [-.1, -.1, -.1, -.1]
+def plot_ground(x_ground, y_ground_top, y_ground_bottom):
     plt.fill_between(x_ground, y_ground_top, y_ground_bottom)
 
 def plot_robot_trajectory(
-    x, y, L, dt, T=9, filename="images/robot trajectory"
+    x, y, L, dt, T=9, filename="images/robot trajectory",
+    x_ground = [-1.1, -.5, -.5, .2],
+    y_ground_top = [.05, .05, 0, 0],
+    y_ground_bottom = [-.1, -.1, -.1, -.1]
 ):
     plot_every = int(T / dt)
     plt.figure()
     for f in range(0, x.shape[1], plot_every):
         add_frame_to_plot(x, y, L, frame=f, alpha=0.3)
     add_frame_to_plot(x, y, L, frame=-1, alpha=1)
-    plot_ground()
+    plot_ground(x_ground, y_ground_top, y_ground_bottom)
     plt.axis('equal')
-    plt.xlim(-1.1, 0.2)
+    plt.xlim(min(x_ground), max(x_ground))
     plt.savefig(filename)
     plt.close()
     
-def plot_frame(x, y, L, filename="robot pos", frame=-1):
+def plot_frame(
+    x, y, L, filename="robot pos", frame=-1,
+    x_ground = [-1.1, -.5, -.5, .2],
+    y_ground_top = [.05, .05, 0, 0],
+    y_ground_bottom = [-.1, -.1, -.1, -.1]
+):
     plt.figure()
     add_frame_to_plot(x, y, L, frame)
-    plot_ground()
+    plot_ground(x_ground, y_ground_top, y_ground_bottom)
     plt.axis('equal')
     plt.xlim(-1.1, 0.2)
     plt.savefig(filename)

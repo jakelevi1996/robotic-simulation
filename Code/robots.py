@@ -178,22 +178,41 @@ class TwoLegRobot():
         self.take_horizontal_step(self.y_lift, final_step_length)
     
     def navigate_step(self, step_height):
-        self.lift_left(step_height + self.y_lift)
-        self.step_left(self.x_step)
-        self.lift_left(-self.y_lift)
-        self.lift_right(step_height + self.y_lift)
-        self.step_right(self.x_step)
-        self.lift_right(-self.y_lift)
+        if step_height > 0:
+            self.lift_left(step_height + self.y_lift)
+            self.step_left(self.x_step)
+            self.lift_left(-self.y_lift)
+            self.lift_right(step_height + self.y_lift)
+            self.step_right(self.x_step)
+            self.lift_right(-self.y_lift)
+        else:
+            self.lift_left(self.y_lift)
+            self.step_left(self.x_step)
+            self.lift_left(step_height - self.y_lift)
+            self.lift_right(self.y_lift)
+            self.step_right(self.x_step)
+            self.lift_right(step_height - self.y_lift)
+    
+    def navigate_terrain(
+        self, x_locs, y_heights, x_clearance=-0.01, x_end_goal=-1.0
+    ):
+        for x, y in zip(x_locs, y_heights):
+            # Calculate how much further to walk until the next step:
+            remaining_distance = x - self.x[0, -1]
 
-class Elizabot(TwoLegRobot):
-    def draw_close(self, y_lift, step_height, x_step):
-        pass
-    
-    def topple(self, y_lift, x_step, step_height):
-        pass
-    
-    def step_over(self):
-        pass
+            # If walking up a step, stop just short of the ledge:
+            if y > 0: x -= x_clearance
+            # If walking down a step, stop just after the ledge:
+            else: x += x_clearance
+
+            # Walk up to the step:
+            self.walk_distance(remaining_distance)
+            # Walk up/down the step:
+            self.navigate_step(y)
+
+        # Walk until the end goal:
+        remaining_distance = x_end_goal - self.x[0, -1]
+        self.walk_distance(remaining_distance)
 
 if __name__ == "__main__":
 
