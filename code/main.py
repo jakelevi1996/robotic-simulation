@@ -9,8 +9,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     logging.info("Creating robot...")
-    # r = TwoLegRobot()
-    r = TwoLegRobot(speed=0.5)
+    r = TwoLegRobot()
+    # r = TwoLegRobot(speed=0.5)
     # r = TwoLegRobot(y_lift=0.005)
 
     logging.info("Navigating terrain...")

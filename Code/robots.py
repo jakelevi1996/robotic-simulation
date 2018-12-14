@@ -185,6 +185,16 @@ class TwoLegRobot():
         self.step_right(self.x_step)
         self.lift_right(-self.y_lift)
 
+class Elizabot(TwoLegRobot):
+    def draw_close(self, y_lift, step_height, x_step):
+        pass
+    
+    def topple(self, y_lift, x_step, step_height):
+        pass
+    
+    def step_over(self):
+        pass
+
 if __name__ == "__main__":
 
     r = TwoLegRobot()
